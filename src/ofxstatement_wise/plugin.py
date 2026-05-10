@@ -49,8 +49,6 @@ class WiseParser(CsvStatementParser):
             self.mappings = {
                 #"date": self.columns['Date Time'],
                 "memo": self.columns['Description'],
-                #"payee": self.columns['Payee Name'],
-                #"check_no": self.columns['TransferWise ID'],
                 "id": self.columns['TransferWise ID'],
                 "amount": self.columns['Amount'],
             }
@@ -79,11 +77,10 @@ class WiseParser(CsvStatementParser):
 
         # .payee becomes OFX.NAME which becomes "Description" in GnuCash
         # .memo  becomes OFX.MEMO which becomes "Notes"       in GnuCash
-        # When .payee is empty, GnuCash imports .memo to "Description" and keeps "Notes" empty
-
-        # StatementLine.memo = "Název protistrany" + "Číslo účtu protistrany" + "Kód banky protistrany" + "IBAN protistrany"
+        # When .payee is empty, GnuCash imports .memo to "Description" and puts OFX Trans type to "Notes"
 
         StatementLine.memo = self._make_memo(line)
+
 
         return StatementLine
 
