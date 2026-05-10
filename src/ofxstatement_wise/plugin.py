@@ -99,6 +99,6 @@ class WiseParser(CsvStatementParser):
         if exc_from and exc_to and exc_rate:
             memo += f", {exc_rate} {exc_from}/{exc_to}"
         if card_no:
-            memo += f", card #: {card_no}"
+            memo += f", card # {card_no}"
 
         return memo
