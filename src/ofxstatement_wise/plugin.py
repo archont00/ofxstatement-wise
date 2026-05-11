@@ -75,30 +75,43 @@ class WiseParser(CsvStatementParser):
 
         StatementLine.trntype = line[columns["Transaction Type"]]
 
-        # .payee becomes OFX.NAME which becomes "Description" in GnuCash
-        # .memo  becomes OFX.MEMO which becomes "Notes"       in GnuCash
-        # When .payee is empty, GnuCash imports .memo to "Description" and puts OFX Trans type to "Notes"
+        # .payee becomes OFX.NAME which becomes "Description" in GnuCash (1st line)
+        # .memo  becomes OFX.MEMO which becomes "Notes/Memo"  in GnuCash (2nd line)
+        # When .payee is empty, then GnuCash
+        #   - imports .memo to "Description" and
+        #   - puts `OFX ext. info: |Trans type:Generic debit` to "Notes"
+        # Since Wise combines .payee and .memo into a single field "Description", it is better
+        # to use it as .payee for OFX.
 
-        StatementLine.memo = self._make_memo(line)
-
+        StatementLine.payee = self._make_payee(line)
 
         return StatementLine
 
-    def _make_memo(self, line):
+
+    def _make_payee(self, line):
         descr = line[self.columns["Description"]]
         payref = line[self.columns["Payment Reference"]]
         exc_from = line[self.columns["Exchange From"]]
         exc_to = line[self.columns["Exchange To"]]
         exc_rate = line[self.columns["Exchange Rate"]]
         card_no = line[self.columns["Card Last Four Digits"]]
+        # The user can choose to download statement with "Total Fees"included in "Amount" or as a separate line.
+        # In the latter case, the underlying transaction line still shows non-zero value in "Total fees".
+        fee_str = line[self.columns["Total fees"]]
+        try:
+            fee = float(fee_raw) if fee_raw.strip() else 0.0
+        except ValueError:
+            fee = 0.0
 
-        memo = descr
+        payee = descr
 
         if payref:
-            memo += f" ({payref})"
+            payee += f" ({payref})"
         if exc_from and exc_to and exc_rate:
-            memo += f", {exc_rate} {exc_from}/{exc_to}"
+            payee += f", {exc_rate} {exc_from}/{exc_to}"
+        if fee != 0.0:
+            payee += f", fee {fee_raw}"
         if card_no:
-            memo += f", card # {card_no}"
+            payee += f", card # {card_no}"
 
-        return memo
+        return payee
