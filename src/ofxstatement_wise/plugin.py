@@ -99,7 +99,7 @@ class WiseParser(CsvStatementParser):
         # In the latter case, the underlying transaction line still shows non-zero value in "Total fees".
         fee_str = line[self.columns["Total fees"]]
         try:
-            fee = float(fee_raw) if fee_raw.strip() else 0.0
+            fee = float(fee_str) if fee_str.strip() else 0.0
         except ValueError:
             fee = 0.0
 
@@ -110,7 +110,7 @@ class WiseParser(CsvStatementParser):
         if exc_from and exc_to and exc_rate:
             payee += f", {exc_rate} {exc_from}/{exc_to}"
         if fee != 0.0:
-            payee += f", fee {fee_raw}"
+            payee += f", fee {fee_str}"
         if card_no:
             payee += f", card # {card_no}"
 
