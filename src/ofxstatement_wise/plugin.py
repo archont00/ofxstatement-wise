@@ -82,7 +82,7 @@ class WiseParser(CsvStatementParser):
         # to use it as .payee for OFX.
 
         StatementLine.payee = self._make_payee(line)
-        StatementLine.memo = ""
+        StatementLine.memo = " "
 
         return StatementLine
 
