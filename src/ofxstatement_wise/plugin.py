@@ -47,8 +47,6 @@ class WiseParser(CsvStatementParser):
             # Prepare columns headers lookup table for parsing
             self.columns = {v: i for i,v in enumerate(line)}
             self.mappings = {
-                #"date": self.columns['Date Time'],
-                "memo": self.columns['Description'],
                 "id": self.columns['TransferWise ID'],
                 "amount": self.columns['Amount'],
             }
