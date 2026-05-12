@@ -47,8 +47,6 @@ class WiseParser(CsvStatementParser):
             # Prepare columns headers lookup table for parsing
             self.columns = {v: i for i,v in enumerate(line)}
             self.mappings = {
-                #"date": self.columns['Date Time'],
-                "memo": self.columns['Description'],
                 "id": self.columns['TransferWise ID'],
                 "amount": self.columns['Amount'],
             }
@@ -75,14 +73,17 @@ class WiseParser(CsvStatementParser):
 
         StatementLine.trntype = line[columns["Transaction Type"]]
 
-        # .payee becomes OFX.NAME which becomes "Description" in GnuCash
-        # .memo  becomes OFX.MEMO which becomes "Notes"       in GnuCash
-        # When .payee is empty, GnuCash imports .memo to "Description" and puts OFX Trans type to "Notes"
+        # .payee becomes OFX.NAME which becomes "Description" in GnuCash (1st line)
+        # .memo  becomes OFX.MEMO which becomes "Notes/Memo"  in GnuCash (2nd line)
+        # When .payee is empty, then GnuCash maps .memo to "Description".
+        # GnuCash always puts `OFX ext. info: |Trans type:Generic debit` to "Notes" even if .name & .memo exist.
+        # Wise combines .payee and .memo into a single field "Description". Since .payee is empty, it is okay
+        # to use it as .memo for OFX generation as it eventually is mapped to "Description" field in GnuCash.
 
         StatementLine.memo = self._make_memo(line)
 
-
         return StatementLine
+
 
     def _make_memo(self, line):
         descr = line[self.columns["Description"]]
@@ -91,6 +92,13 @@ class WiseParser(CsvStatementParser):
         exc_to = line[self.columns["Exchange To"]]
         exc_rate = line[self.columns["Exchange Rate"]]
         card_no = line[self.columns["Card Last Four Digits"]]
+        # The user can choose to download statement with "Total Fees"included in "Amount" or as a separate line.
+        # In the latter case, the underlying transaction line still shows non-zero value in "Total fees".
+        fee_raw = line[self.columns["Total fees"]]
+        try:
+            fee = float(fee_raw) if fee_raw.strip() else 0.0
+        except ValueError:
+            fee = 0.0
 
         memo = descr
 
@@ -98,6 +106,8 @@ class WiseParser(CsvStatementParser):
             memo += f" ({payref})"
         if exc_from and exc_to and exc_rate:
             memo += f", {exc_rate} {exc_from}/{exc_to}"
+        if fee != 0.0:
+            memo += f", fee {fee_str}"
         if card_no:
             memo += f", card # {card_no}"
 
