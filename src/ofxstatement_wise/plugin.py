@@ -75,18 +75,17 @@ class WiseParser(CsvStatementParser):
 
         # .payee becomes OFX.NAME which becomes "Description" in GnuCash (1st line)
         # .memo  becomes OFX.MEMO which becomes "Notes/Memo"  in GnuCash (2nd line)
-        # When .payee is empty, then GnuCash
-        #   - imports .memo to "Description" and
-        #   - puts `OFX ext. info: |Trans type:Generic debit` to "Notes"
-        # Since Wise combines .payee and .memo into a single field "Description", it is better
-        # to use it as .payee for OFX.
+        # When .payee is empty, then GnuCash maps .memo to "Description".
+        # GnuCash always puts `OFX ext. info: |Trans type:Generic debit` to "Notes" even if .name & .memo exist.
+        # Wise combines .payee and .memo into a single field "Description". Since .payee is empty, it is okay
+        # to use it as .memo for OFX generation as it eventually is mapped to "Description" field in GnuCash.
 
-        StatementLine.payee = self._make_payee(line)
+        StatementLine.memo = self._make_memo(line)
 
         return StatementLine
 
 
-    def _make_payee(self, line):
+    def _make_memo(self, line):
         descr = line[self.columns["Description"]]
         payref = line[self.columns["Payment Reference"]]
         exc_from = line[self.columns["Exchange From"]]
@@ -95,21 +94,21 @@ class WiseParser(CsvStatementParser):
         card_no = line[self.columns["Card Last Four Digits"]]
         # The user can choose to download statement with "Total Fees"included in "Amount" or as a separate line.
         # In the latter case, the underlying transaction line still shows non-zero value in "Total fees".
-        fee_str = line[self.columns["Total fees"]]
+        fee_raw = line[self.columns["Total fees"]]
         try:
-            fee = float(fee_str) if fee_str.strip() else 0.0
+            fee = float(fee_raw) if fee_raw.strip() else 0.0
         except ValueError:
             fee = 0.0
 
-        payee = descr
+        memo = descr
 
         if payref:
-            payee += f" ({payref})"
+            memo += f" ({payref})"
         if exc_from and exc_to and exc_rate:
-            payee += f", {exc_rate} {exc_from}/{exc_to}"
+            memo += f", {exc_rate} {exc_from}/{exc_to}"
         if fee != 0.0:
-            payee += f", fee {fee_str}"
+            memo += f", fee {fee_str}"
         if card_no:
-            payee += f", card # {card_no}"
+            memo += f", card # {card_no}"
 
-        return payee
+        return memo
